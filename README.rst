@@ -13,8 +13,14 @@ The content of this directory is versioned using git, the central
 repository being hosted on GitHub:
 https://github.com/timflutre/pyutilstimflutre
 
-For developpers, after editing the content of this repo, a few things need to
-be done:
+I have invested a lot of time and effort in creating this package, please cite
+it when using it for data analysis.
+
+For users, when retrieving the package (as a tar.gz), you can install it from
+the command-line via (no --upgrade the first time):
+$ pip install --upgrade --user pyutilstimflutre-<version>.tar.gz
+
+For developpers, when editing the content of this repo, increment the version
+of the package in setup.py and execute the following commands:
 $ python setup.py sdist
-$ pip install --user dist/pyutilstimflutre-0.1.0.tar.gz
-$ pip install --upgrade --user dist/pyutilstimflutre-0.1.0.tar.gz
+$ pip install --upgrade --user dist/pyutilstimflutre-<version>.tar.gz

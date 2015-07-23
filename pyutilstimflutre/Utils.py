@@ -8,9 +8,10 @@
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import sys
-import subprocess
 import random
+import string
+import subprocess
+import sys
 
 class Utils(object):
     
