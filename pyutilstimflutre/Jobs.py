@@ -5,6 +5,11 @@
 # Persons: Timothée Flutre [cre,aut]
 # Versioning: https://github.com/timflutre/pyutilstimflutre
 
+# TODO:
+# - allow to specify Job.duration and Job.memory
+# - record return status of a job
+# - allow to use out-of-memory system to store jobs (e.g. SQLite)
+
 from __future__ import print_function
 from __future__ import unicode_literals
 
@@ -15,11 +20,12 @@ import time
 
 class Job(object):
     
-    def __init__(self, groupId, name, cmd=None, bashFile=None):
+    def __init__(self, groupId, name, cmd=None, bashFile=None, dir=None):
         self.groupId = groupId
         self.name = name
-        self.cmd = cmd
-        self.bashFile = bashFile
+        self.cmd = cmd # should be cmd or bashFile, not both
+        self.bashFile = bashFile # should be an absolute path
+        self.dir = dir # directory in which the output of "qsub -N" should be
         self.queue = None # set by JobGroup upon insertion
         self.duration = None # set by JobGroup upon insertion
         self.memory = None # set by JobGroup upon insertion
@@ -27,7 +33,13 @@ class Job(object):
         self.node = None # not used yet
         
     def submit(self):
-        qsubCmd = "qsub -cwd -j y -V -q %s -N %s" % (self.queue, self.name)
+        cwd = os.getcwd()
+        if self.dir:
+            os.chdir(self.dir)
+            
+        qsubCmd = "qsub -cwd -j y -V"
+        qsubCmd += " -q %s" % self.queue
+        qsubCmd += " -N %s" % self.name
         if self.duration:
             pass
         if self.memory:
@@ -35,6 +47,9 @@ class Job(object):
         
         cmd = ""
         if self.bashFile:
+            if not os.path.exists(self.bashFile):
+                msg = "can't find file '%s'" % self.bashFile
+                raise ValueError(msg)
             cmd += "%s %s" % (qsubCmd, self.bashFile)
         elif self.cmd:
             cmd += "echo -e '%s'" % self.cmd.encode('unicode-escape')
@@ -47,6 +62,8 @@ class Job(object):
         p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()
         p = p[0].split()[2]
         self.id = int(p)
+        
+        os.chdir(cwd)
         
         return self.id
     
@@ -82,8 +99,10 @@ class JobGroup(object):
         self.lJobs[-1].queue = self.queue
         self.lJobNames.append(iJob.name)
         
-    def submit(self):
-        for i in range(len(self.lJobs)):
+    def submit(self, lIdxJobs=None):
+        if not lIdxJobs: # launch all jobs by default
+            lIdxJobs = range(len(self.lJobs))
+        for i in lIdxJobs:
             jobId = self.lJobs[i].submit()
             self.lJobIds.append(jobId)
             
