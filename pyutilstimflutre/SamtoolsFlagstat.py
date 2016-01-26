@@ -1,7 +1,8 @@
+# -*- coding: utf-8 -*-
 # Parse the output from the SamTools FlagStat program
 # https://github.com/samtools/samtools
 
-# Copyright (C) 2014-2015 Institut National de la Recherche Agronomique (INRA)
+# Copyright (C) 2014-2016 Institut National de la Recherche Agronomique (INRA)
 # License: GPL-3+
 # Persons: Timothée Flutre [cre,aut]
 # Versioning: https://github.com/timflutre/pyutilstimflutre

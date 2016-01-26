@@ -1,6 +1,7 @@
+# -*- coding: utf-8 -*-
 # Utility functions (static methods of the Utils class)
 
-# Copyright (C) 2014-2015 Institut National de la Recherche Agronomique (INRA)
+# Copyright (C) 2014-2016 Institut National de la Recherche Agronomique (INRA)
 # License: GPL-3+
 # Persons: Timothée Flutre [cre,aut]
 # Versioning: https://github.com/timflutre/pyutilstimflutre
@@ -45,3 +46,15 @@ class Utils(object):
         else:
             prgPath = p.rstrip()
             return True
+
+    @staticmethod
+    def getProgramPath(prgName):
+        args = ["which", prgName]
+        try:
+            p = subprocess.check_output(args, stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError, e:
+            msg = "can't find '%s' in PATH" % prgName
+            raise ValueError(msg)
+        else:
+            progPath = p.rstrip()
+            return progPath
