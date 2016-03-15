@@ -15,6 +15,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import os
+import pwd
 import subprocess
 import sys
 import time
@@ -30,7 +31,7 @@ class Job(object):
         self.queue = None # set by JobGroup upon insertion
         self.duration = None # set by JobGroup upon insertion
         self.memory = None # set by JobGroup upon insertion
-        self.id = None # set right after submission
+        self.id = None # set inside submit()
         self.node = None # not used yet
         
     def submit(self):
@@ -38,31 +39,52 @@ class Job(object):
         if self.dir:
             os.chdir(self.dir)
             
-        qsubCmd = "qsub -cwd -j y -V"
-        qsubCmd += " -q %s" % self.queue
-        qsubCmd += " -N %s" % self.name
+        qsubArgs = ["qsub"]
+        qsubArgs += ["-cwd"]
+        qsubArgs += ["-j", "y"]
+        qsubArgs += ["-V"]
+        qsubArgs += ["-q", self.queue]
+        qsubArgs += ["-N", self.name]
         if self.duration:
             pass
         if self.memory:
             pass
         
-        cmd = ""
+        out = None
         if self.bashFile:
             if not os.path.exists(self.bashFile):
                 msg = "can't find file '%s'" % self.bashFile
                 raise ValueError(msg)
-            cmd += "%s %s" % (qsubCmd, self.bashFile)
+            args = qsubArgs + [self.bashFile]
+            out = subprocess.check_output(args)
         elif self.cmd:
-            cmd += "echo -e '%s'" % self.cmd.encode('unicode-escape')
-            cmd += " | %s" % qsubCmd
+            echoArgs = ["echo"]
+            echoArgs += ["-e", "'%s'" % self.cmd.encode('unicode-escape')]
+            
+            # see question http://stackoverflow.com/q/36006597/597069
+            
+            # http://stackoverflow.com/a/13332300/597069
+            # echoProc = subprocess.Popen(echoArgs, stdout=subprocess.PIPE)
+            # out = subprocess.check_output(qsubArgs, stdin=echoProc.stdout)
+            # echoProc.wait()
+            
+            # http://stackoverflow.com/a/17129244/597069
+            # echoProc = subprocess.Popen(echoArgs, stdout=subprocess.PIPE)
+            # qsubProc = subprocess.Popen(qsubArgs, stdin=echoProc.stdout, stdout=subprocess.PIPE)
+            # echoProc.stdout.close()
+            # out = qsubProc.communicate()[0]
+            # echoProc.wait()
+            
+            cmd = " ".join(echoArgs) + " | " + " ".join(qsubArgs)
+            out = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+            out = out.communicate()[0]
         else:
             msg = "try to submit job '%s' with neither cmd nor bash file" \
                   % self.name
             raise ValueError(msg)
         
-        p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()
-        p = p[0].split()[2]
-        self.id = int(p)
+        ## out -> Your job <job_id> ("<job_name>") has been submitted
+        self.id = int(out.split()[2])
         
         os.chdir(cwd)
         
@@ -88,8 +110,8 @@ class JobGroup(object):
         
     def checkQueue(self):
         if self.scheduler == "SGE":
-            p = subprocess.Popen(["qconf", "-sql"], shell=False, stdout=subprocess.PIPE).communicate()
-            p = p[0].split("\n")
+            p = subprocess.check_output(["qconf", "-sql"])
+            p = p.split("\n")
             if self.queue not in p:
                 msg = "unknown queue '%s'" % self.queue
                 raise ValueError(msg)
@@ -113,20 +135,20 @@ class JobGroup(object):
             raise ValueError(msg)
         
         lUnfinishedJobIds = []
-        cmd = "qstat -u '%s'" % os.getlogin()
-        cmd += " -q %s" % self.queue
+        args = ["qstat"]
+        args += ["-u", pwd.getpwuid(os.getuid())[0]]
+        args += ["-q", self.queue]
         
         if method == "oneliner":
-            cmd += " | sed 1,2d"
-            cmd += " | awk '{print $1}'"
-            # print(cmd) # debug
-            p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()
-            p = p[0].split("\n")[:-1]
-            # print(p) # debug
-            lUnfinishedJobIds = [int(jobId) for jobId in p
-                                 if int(jobId) in self.lJobIds]
-        elif method == "xml": # http://stackoverflow.com/a/26104540/597069
-            cmd += " -r -xml"
+            p = subprocess.check_output(args)
+            for line in p.split("\n")[2:]:
+                tokens = line.split()
+                if len(tokens) > 0:
+                    lUnfinishedJobIds.append(int(tokens[0]))
+        elif method == "xml":
+            # http://stackoverflow.com/a/26104540/597069
+            args += ["-r", "-xml"]
+            cmd = " ".join(args)
             f = os.popen(cmd)
             dom = xml.dom.minidom.parse(f)
             jobs = dom.getElementsByTagName('job_info')
