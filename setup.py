@@ -11,6 +11,7 @@ from setuptools import setup, find_packages
 # To use a consistent encoding
 from codecs import open
 from os import path
+import re
 
 here = path.abspath(path.dirname(__file__))
 
@@ -18,13 +19,23 @@ here = path.abspath(path.dirname(__file__))
 with open(path.join(here, 'DESCRIPTION.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
+# simplified from https://packaging.python.org/en/latest/single_source_version/
+def find_version():
+    with open(path.join(here, 'pyutilstimflutre/__init__.py')) as f:
+        version_file = f.read()
+        version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]",
+                                  version_file, re.M)
+        if version_match:
+            return version_match.group(1)
+        raise RuntimeError("Unable to find version string.")
+
 setup(
     name='pyutilstimflutre',
 
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.3.1',
+    version=find_version(),
 
     description="Timothée Flutre's personal Python code",
     long_description=long_description,

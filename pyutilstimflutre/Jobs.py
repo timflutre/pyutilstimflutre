@@ -29,8 +29,7 @@ class Job(object):
         self.bashFile = bashFile # should be an absolute path
         self.dir = dir # directory in which the output of "qsub -N" should be
         self.queue = None # set by JobGroup upon insertion
-        self.duration = None # set by JobGroup upon insertion
-        self.memory = None # set by JobGroup upon insertion
+        self.lResources = None # set by JobGroup upon insertion
         self.id = None # set inside submit()
         self.node = None # not used yet
         
@@ -45,11 +44,10 @@ class Job(object):
         qsubArgs += ["-V"]
         qsubArgs += ["-q", self.queue]
         qsubArgs += ["-N", self.name]
-        if self.duration:
-            pass
-        if self.memory:
-            pass
-        
+        if self.lResources:
+            for resource in self.lResources:
+                qsubArgs += ["-l", resource]
+                
         out = None
         if self.bashFile:
             if not os.path.exists(self.bashFile):
@@ -93,12 +91,13 @@ class Job(object):
     
 class JobGroup(object):
     
-    def __init__(self, groupId, scheduler, queue):
+    def __init__(self, groupId, scheduler, queue, lResources=None):
         self.id = groupId
         self.scheduler = scheduler
         self.checkScheduler()
         self.queue = queue
         self.checkQueue()
+        self.lResources = lResources
         self.lJobs = [] # filled via self.insert()
         self.lJobNames = [] # filled via self.insert()
         self.lJobIds = [] # filled via self.submit()
@@ -120,6 +119,7 @@ class JobGroup(object):
         self.lJobs.append(iJob)
         self.lJobs[-1].scheduler = self.scheduler
         self.lJobs[-1].queue = self.queue
+        self.lJobs[-1].lResources = self.lResources
         self.lJobNames.append(iJob.name)
         
     def submit(self, lIdxJobs=None):
