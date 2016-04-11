@@ -21,6 +21,6 @@ the command-line via (no --upgrade the first time):
 $ pip install --upgrade --user pyutilstimflutre-<version>.tar.gz
 
 For developpers, when editing the content of this repo, increment the version
-of the package in setup.py and execute the following commands:
+of the package in __init__.py and execute the following commands:
 $ python setup.py sdist
 $ pip install --upgrade --user dist/pyutilstimflutre-<version>.tar.gz

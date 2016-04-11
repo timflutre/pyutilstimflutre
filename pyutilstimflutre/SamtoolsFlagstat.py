@@ -15,7 +15,7 @@ import string
 
 class SamtoolsFlagstat(object):
     """
-    Parse the output of `samtools flagstats' (works with version 1.1).
+    Parse the output of `samtools flagstats' (works with version 1.2).
     """
     
     @staticmethod
@@ -28,7 +28,7 @@ class SamtoolsFlagstat(object):
                        "name": "secondary",
                        "qc.passed": None, "qc.failed": None})
         lStats.append({"id": "suppl",
-                       "name": "supplimentary",
+                       "name": "supplementary",
                        "qc.passed": None, "qc.failed": None})
         lStats.append({"id": "dupl",
                        "name": "duplicates",
