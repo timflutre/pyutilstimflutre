@@ -20,6 +20,7 @@ import pwd
 import subprocess
 import sys
 import time
+import stat
             
             
 class JobManager(object):
@@ -131,7 +132,7 @@ class JobGroup(object):
                                                          self.lJobIds[-1])
             sys.stdout.write("%s\n" % msg)
             sys.stdout.flush()
-        for x in [2, 2, 10, 10, 20]:
+        for x in [2, 2, 2, 5, 5, 10, 15]:
             time.sleep(x)
             if len(self.getUnfinishedJobIds()) == 0:
                 break
@@ -150,8 +151,8 @@ class Job(object):
     def __init__(self, groupId, name, cmd=None, bashFile=None, dir=None):
         self.groupId = groupId
         self.name = name
-        self.cmd = cmd # in submit(), should be cmd or bashFile, not both
-        self.bashFile = bashFile # should be an absolute path
+        self.cmd = cmd # string, potentially multi-line, with bash commands
+        self.bashFile = bashFile # absolute path; if not None, take precedence over self.cmd
         self.dir = dir # directory in which the output of "qsub -N" should be
         self.queue = None # set via JobGroup upon insertion or submission
         self.lResources = None # set by JobGroup upon insertion or submission
@@ -180,12 +181,19 @@ class Job(object):
                     
         out = None
         if self.bashFile:
-            if not os.path.exists(self.bashFile):
-                msg = "can't find file '%s'" % self.bashFile
-                raise ValueError(msg)
+            bashHandle = open(self.bashFile, "w")
+            txt = "#!/usr/bin/env bash"
+            txt += "\nset -e"
+            txt += "\nset -o pipefail"
+            txt += "\ndate"
+            txt += "\n%s" % self.cmd
+            txt += "\ndate"
+            bashHandle.write("%s\n" % txt)
+            bashHandle.close()
+            os.chmod(self.bashFile, stat.S_IREAD | stat.S_IEXEC)
             args = qsubArgs + [self.bashFile]
             out = subprocess.check_output(args)
-        elif self.cmd:
+        else:
             echoArgs = ["echo"]
             echoArgs += ["-e", "'%s'" % self.cmd.encode('unicode-escape')]
             
@@ -206,10 +214,6 @@ class Job(object):
             cmd = " ".join(echoArgs) + " | " + " ".join(qsubArgs)
             out = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
             out = out.communicate()[0]
-        else:
-            msg = "try to submit job '%s' with neither cmd nor bash file" \
-                  % self.name
-            raise ValueError(msg)
         
         ## out -> Your job <job_id> ("<job_name>") has been submitted
         self.id = int(out.split()[2])
