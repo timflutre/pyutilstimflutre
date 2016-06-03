@@ -1,9 +1,10 @@
-__version__ = "0.3.5"
+__version__ = "0.4.0"
 # to be incremented manually
 # automatically parsed by setup.py
 
 from Fastqc import Fastqc
 from Utils import Utils
-from Jobs import Job, JobGroup, JobManager
+from DbSqlite import DbSqlite
+from Jobs import JobManager, JobGroup, Job
 from SamtoolsFlagstat import SamtoolsFlagstat
 from ProgVersion import ProgVersion
