@@ -148,6 +148,16 @@ class JobGroup(object):
             
         return lUnfinishedJobIds
     
+    def removeUnknownJobIds(self, lUnfinishedJobIds):
+        """
+        Remove job IDs belonging to the same user on the same queue but having another group ID.
+        """
+        lKnownUnfinishedJobIds = []
+        for jobId in lUnfinishedJobIds:
+            if jobId in self.dJobId2JobIdx:
+                lKnownUnfinishedJobIds.append(jobId)
+        return lKnownUnfinishedJobIds
+    
     def updateStatusOfFinishedJobs(self, lUnfinishedJobIds, db):
         # retrieve job ids of finished jobs (i.e. not in qstat anymore)
         # whose status in the table still is "waiting"
@@ -190,12 +200,14 @@ class JobGroup(object):
         for x in [2, 2, 2, 5, 5, 5, 10, 10, 10]:
             time.sleep(x)
             lUnfinishedJobIds = self.getUnfinishedJobIds()
+            lUnfinishedJobIds = self.removeUnknownJobIds(lUnfinishedJobIds)
             self.updateStatusOfFinishedJobs(lUnfinishedJobIds, db)
             if len(lUnfinishedJobIds) == 0:
                 break
         while True:
             time.sleep(15)
             lUnfinishedJobIds = self.getUnfinishedJobIds()
+            lUnfinishedJobIds = self.removeUnknownJobIds(lUnfinishedJobIds)
             self.updateStatusOfFinishedJobs(lUnfinishedJobIds, db)
             if len(lUnfinishedJobIds) == 0:
                 break
