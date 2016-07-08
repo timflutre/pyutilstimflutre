@@ -6,6 +6,9 @@
 # Persons: Timothée Flutre [cre,aut]
 # Versioning: https://github.com/timflutre/pyutilstimflutre
 
+# # Tests:
+# $ python -m doctest ProgVersion.py
+
 from __future__ import print_function
 from __future__ import unicode_literals
 
@@ -21,6 +24,25 @@ class ProgVersion(object):
     
     def __init__(self):
         pass
+    
+    @staticmethod
+    def getVersion(binName):
+        """
+        Parse --version following http://www.gnu.org/s/help2man.
+        
+        >>> majVer, minVer = ProgVersion.getVersion("date")
+        >>> type(majVer)
+        <type 'int'>
+        >>> type(minVer)
+        <type 'int'>
+        """
+        args = [binName, "--version"]
+        p = subprocess.check_output(args)
+        p = p.splitlines()
+        version = p[0].split(" ")[-1]
+        majVer = int(version.split(".")[0])
+        minVer = int(version.split(".")[1])
+        return majVer, minVer
     
     @staticmethod
     def getVersionGatk(pathToJar=None):
