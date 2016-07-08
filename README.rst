@@ -17,10 +17,12 @@ I have invested a lot of time and effort in creating this package, please cite
 it when using it for data analysis.
 
 For users, when retrieving the package (as a tar.gz), you can install it from
-the command-line via (no --upgrade the first time):
+the command-line via (no --upgrade the first time)::
+
 $ pip install --upgrade --user pyutilstimflutre-<version>.tar.gz
 
 For developpers, when editing the content of this repo, increment the version
-of the package in __init__.py and execute the following commands:
+of the package in __init__.py and execute the following commands::
+
 $ python setup.py sdist
 $ pip install --upgrade --user dist/pyutilstimflutre-<version>.tar.gz
