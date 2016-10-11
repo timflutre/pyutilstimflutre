@@ -69,6 +69,7 @@ class JobManager(object):
         cmd += " jobdir TEXT NOT NULL,"
         cmd += " groupid TEXT NOT NULL,"
         cmd += " queue TEXT NOT NULL,"
+        cmd += " resources TEXT,"
         cmd += " status TEXT NOT NULL,"
         cmd += " datetime TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL)"
         self.db.execomm(cmd)
@@ -242,6 +243,10 @@ class Job(object):
         cmd += ", '%s'" % self.dir
         cmd += ", '%s'" % self.groupId
         cmd += ", '%s'" % self.queue
+        if self.lResources:
+            cmd += ", '%s'" % " ".join(self.lResources)
+        else:
+            cmd += ", ''"
         cmd += ", '%s')" % "waiting"
         db.execomm(cmd)
         
