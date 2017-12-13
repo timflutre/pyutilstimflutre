@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 # Manage jobs on a computer cluster
 
-# Copyright (C) 2014-2016 Institut National de la Recherche Agronomique (INRA)
+# Copyright (C) 2014-2017 Institut National de la Recherche Agronomique (INRA)
 # License: GPL-3+
 # Persons: Timothée Flutre [cre,aut]
 # Versioning: https://github.com/timflutre/pyutilstimflutre
 
 # TODO:
+# - allow to use other schedulers, such as SLURM
 # - allow to specify Job.duration and Job.memory
 # - allow to submit a job array made of many similar jobs
 
@@ -19,6 +20,7 @@ import subprocess
 import sys
 import time
 import stat
+import gzip
 
 from pyutilstimflutre import Utils, DbSqlite
 
@@ -82,8 +84,8 @@ class JobManager(object):
     def submit(self, jobGroupId):
         self.groupId2group[jobGroupId].submit(self.db)
         
-    def wait(self, jobGroupId, verbose=1):
-        self.groupId2group[jobGroupId].wait(self.db, verbose)
+    def wait(self, jobGroupId, rmvBash=False, verbose=1):
+        self.groupId2group[jobGroupId].wait(self.db, rmvBash, verbose)
         
     def close(self):
         self.db.conn.close()
@@ -190,7 +192,35 @@ class JobGroup(object):
                     msg += "\nlook into %s" % iJob.dir
                     raise ValueError(msg)
                 
-    def wait(self, db, verbose=1):
+        return lFinishedWaitingJobIds
+    
+    def compressJobOutputs(self, lJobIds):
+        """
+        Compress output file(s) with gzip.
+        """
+        for jobId in lJobIds:
+            iJob = self.lJobs[self.dJobId2JobIdx[jobId]]
+            for inFileName in ["%s/%s.o%s" % (iJob.dir, iJob.name, iJob.id),
+                               "%s/%s.po%s" % (iJob.dir, iJob.name, iJob.id)]:
+                if os.path.isfile(inFileName):
+                    inHandle = open(inFileName, "rb")
+                    outFileName = "%s.gz" % inFileName
+                    outHandle = gzip.open(outFileName, "wb")
+                    outHandle.writelines(inHandle)
+                    outHandle.close()
+                    inHandle.close()
+                    os.remove(inFileName)
+                    
+    def removeBashFiles(self, lJobIds):
+        """
+        Remove bash file(s).
+        """
+        for jobId in lJobIds:
+            iJob = self.lJobs[self.dJobId2JobIdx[jobId]]
+            if iJob.bashFile:
+                os.remove(iJob.bashFile)
+                
+    def wait(self, db, rmvBash=False, verbose=1):
         if verbose > 0:
             msg = "nb of jobs: %i (first=%i last=%i)" % (len(self.lJobs),
                                                          self.lJobs[0].id,
@@ -202,14 +232,22 @@ class JobGroup(object):
             time.sleep(x)
             lUnfinishedJobIds = self.getUnfinishedJobIds()
             lUnfinishedJobIds = self.removeUnknownJobIds(lUnfinishedJobIds)
-            self.updateStatusOfFinishedJobs(lUnfinishedJobIds, db)
+            lJustFinishedJobIds = self.updateStatusOfFinishedJobs(
+                lUnfinishedJobIds, db)
+            self.compressJobOutputs(lJustFinishedJobIds)
+            if rmvBash:
+                self.removeBashFiles(lJustFinishedJobIds)
             if len(lUnfinishedJobIds) == 0:
                 break
         while True:
             time.sleep(15)
             lUnfinishedJobIds = self.getUnfinishedJobIds()
             lUnfinishedJobIds = self.removeUnknownJobIds(lUnfinishedJobIds)
-            self.updateStatusOfFinishedJobs(lUnfinishedJobIds, db)
+            lJustFinishedJobIds = self.updateStatusOfFinishedJobs(
+                lUnfinishedJobIds, db)
+            self.compressJobOutputs(lJustFinishedJobIds)
+            if rmvBash:
+                self.removeBashFiles(lJustFinishedJobIds)
             if len(lUnfinishedJobIds) == 0:
                 break
             
